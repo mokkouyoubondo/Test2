@@ -3,353 +3,213 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>メビウスの輪 — スクロールアニメーション</title>
+    <title>メビウスの輪 — 輪に沿って</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;700&family=Shippori+Mincho:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         :root {
             --bg: #0a0a0f;
-            --surface: #12121a;
             --ink: #e8e6f0;
             --muted: #7a7890;
             --accent: #64d8cb;
             --accent-warm: #f0a060;
-            --line: rgba(100, 216, 203, 0.12);
-            --glow: rgba(100, 216, 203, 0.25);
-            --step-0: clamp(1rem, 0.95rem + 0.3vw, 1.125rem);
-            --step-1: clamp(1.2rem, 1.1rem + 0.6vw, 1.5rem);
-            --step-2: clamp(1.8rem, 1.5rem + 1.2vw, 2.5rem);
-            --step-3: clamp(2.8rem, 2.2rem + 2.4vw, 4.5rem);
-            --space: clamp(1.5rem, 1rem + 2vw, 3rem);
+            --line: rgba(100, 216, 203, 0.2);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: auto;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             background: var(--bg);
             color: var(--ink);
-            font-family: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
-            font-size: var(--step-0);
-            line-height: 1.8;
+            font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
             overflow-x: hidden;
         }
 
-        /* Three.js canvas container */
         #canvas-container {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100vh;
+            top: 0; left: 0;
+            width: 100%; height: 100vh;
             z-index: 1;
+        }
+
+        .scroll-spacer {
+            height: 700vh;
+            position: relative;
+            z-index: 0;
+        }
+
+        .ui-overlay {
+            position: fixed;
+            z-index: 10;
             pointer-events: none;
         }
 
-        #canvas-container canvas {
-            display: block;
+        .title-overlay {
+            top: 36px;
+            left: 40px;
         }
 
-        /* Scroll content overlay */
-        .scroll-content {
-            position: relative;
-            z-index: 2;
-        }
-
-        /* Hero section */
-        .hero {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            padding: var(--space);
-            position: relative;
-        }
-
-        .hero-badge {
-            font-size: 0.75rem;
-            letter-spacing: 0.3em;
-            text-transform: uppercase;
-            color: var(--accent);
-            border: 1px solid var(--line);
-            padding: 0.5rem 1.2rem;
-            border-radius: 100px;
-            margin-bottom: 2rem;
-            backdrop-filter: blur(10px);
-            background: rgba(10, 10, 15, 0.6);
-        }
-
-        .hero h1 {
+        .title-overlay h1 {
             font-family: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
-            font-size: var(--step-3);
+            font-size: clamp(1.2rem, 2vw, 1.6rem);
             font-weight: 700;
-            line-height: 1.2;
-            letter-spacing: 0.05em;
-            margin-bottom: 1rem;
-            text-shadow: 0 0 40px var(--glow);
+            letter-spacing: 0.12em;
+            margin-bottom: 4px;
+            text-shadow: 0 0 20px rgba(100, 216, 203, 0.3);
         }
 
-        .hero-subtitle {
-            font-size: var(--step-1);
+        .title-overlay p {
+            font-size: 0.7rem;
             color: var(--muted);
-            font-weight: 300;
-            max-width: 28ch;
-            margin-bottom: 3rem;
+            letter-spacing: 0.2em;
         }
 
         .scroll-hint {
-            position: absolute;
-            bottom: 3rem;
+            bottom: 40px;
             left: 50%;
             transform: translateX(-50%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
+            text-align: center;
             color: var(--muted);
-            font-size: 0.8rem;
-            letter-spacing: 0.15em;
-            animation: float 2.5s ease-in-out infinite;
+            font-size: 0.75rem;
+            letter-spacing: 0.25em;
+            transition: opacity 0.6s ease;
         }
 
         .scroll-hint svg {
-            width: 24px;
-            height: 24px;
-            stroke: var(--accent);
-            stroke-width: 1.5;
-            fill: none;
+            margin-top: 8px;
+            animation: float 2.2s ease-in-out infinite;
         }
 
         @keyframes float {
-            0%, 100% { transform: translateX(-50%) translateY(0); }
-            50% { transform: translateX(-50%) translateY(8px); }
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(10px); }
         }
 
-        /* Content sections */
-        .section {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            padding: var(--space);
-            max-width: 900px;
-            margin: 0 auto;
-        }
-
-        .section-inner {
-            background: rgba(18, 18, 26, 0.7);
-            backdrop-filter: blur(20px);
+        .progress-panel {
+            bottom: 36px;
+            right: 40px;
+            background: rgba(12, 14, 24, 0.75);
             border: 1px solid var(--line);
-            border-radius: 20px;
-            padding: clamp(2rem, 4vw, 4rem);
-            width: 100%;
-            position: relative;
+            border-radius: 14px;
+            padding: 16px 22px;
+            backdrop-filter: blur(12px);
+        }
+
+        .lap-text {
+            font-size: 0.8rem;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            width: 130px;
+            height: 3px;
+            background: rgba(100, 216, 203, 0.12);
+            border-radius: 2px;
             overflow: hidden;
         }
 
-        .section-inner::before {
-            content: "";
-            position: absolute;
-            top: -50%;
-            right: -20%;
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, var(--glow) 0%, transparent 70%);
-            opacity: 0.5;
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-warm));
+            width: 0%;
+            transition: width 0.05s linear;
+        }
+
+        .flash-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #fff;
+            opacity: 0;
             pointer-events: none;
+            z-index: 8;
+            transition: opacity 0.05s linear;
         }
 
-        .section-number {
-            font-family: "Shippori Mincho", serif;
-            font-size: 5rem;
-            font-weight: 700;
-            color: rgba(100, 216, 203, 0.08);
-            position: absolute;
-            top: 1rem;
-            right: 2rem;
-            line-height: 1;
-            user-select: none;
-        }
-
-        .section h2 {
-            font-family: "Shippori Mincho", serif;
-            font-size: var(--step-2);
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-            color: var(--ink);
-        }
-
-        .section p {
-            color: var(--muted);
-            margin-bottom: 1.2rem;
-            max-width: 60ch;
-        }
-
-        .section p:last-child {
-            margin-bottom: 0;
-        }
-
-        .highlight {
+        .lap-flash {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.92);
+            font-family: "Shippori Mincho", "Hiragino Mincho ProN", serif;
+            font-size: clamp(1.8rem, 4vw, 3rem);
             color: var(--accent);
-            font-weight: 400;
-        }
-
-        .highlight-warm {
-            color: var(--accent-warm);
-            font-weight: 400;
-        }
-
-        /* Divider line animation */
-        .divider {
-            width: 60px;
-            height: 2px;
-            background: linear-gradient(90deg, var(--accent), transparent);
-            margin: 1.5rem 0;
-            border-radius: 2px;
-        }
-
-        /* Fact box */
-        .fact-box {
-            border-left: 2px solid var(--accent);
-            padding-left: 1.5rem;
-            margin: 2rem 0;
-        }
-
-        .fact-box p {
-            color: var(--ink);
-            font-size: 0.95rem;
-            line-height: 1.9;
-        }
-
-        /* Footer */
-        .footer {
-            min-height: 50vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            padding: var(--space);
-            position: relative;
-        }
-
-        .footer h2 {
-            font-family: "Shippori Mincho", serif;
-            font-size: var(--step-2);
-            margin-bottom: 1rem;
-        }
-
-        .footer p {
-            color: var(--muted);
-            font-size: 0.9rem;
-        }
-
-        .footer-glow {
-            position: absolute;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, var(--glow) 0%, transparent 60%);
-            opacity: 0.4;
+            letter-spacing: 0.25em;
+            opacity: 0;
+            transition: all 0.6s ease;
+            z-index: 15;
             pointer-events: none;
+            text-shadow: 0 0 50px rgba(100, 216, 203, 0.6);
+            white-space: nowrap;
         }
 
-        /* Reduced motion */
-        @media (prefers-reduced-motion: reduce) {
-            .scroll-hint {
-                animation: none;
-            }
-            html {
-                scroll-behavior: auto;
-            }
+        .lap-flash.visible {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
         }
 
-        /* Mobile */
         @media (max-width: 600px) {
-            .section-inner {
-                padding: 1.5rem;
-            }
-            .section-number {
-                font-size: 3.5rem;
-                top: 0.5rem;
-                right: 1rem;
-            }
+            .title-overlay { top: 20px; left: 20px; }
+            .progress-panel { bottom: 20px; right: 20px; padding: 12px 16px; }
+            .progress-bar { width: 100px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .scroll-hint svg { animation: none; }
         }
     </style>
 </head>
 <body>
     <div id="canvas-container"></div>
+    <div class="flash-overlay"></div>
+    <div class="lap-flash" id="lap-flash">2nd LAP</div>
 
-    <div class="scroll-content">
-        <section class="hero">
-            <div class="hero-badge">Möbius Strip</div>
-            <h1>メビウスの輪</h1>
-            <p class="hero-subtitle">ひとつの面が無限に続く、<br>数学の詩。</p>
-            <div class="scroll-hint">
-                <span>SCROLL</span>
-                <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-            </div>
-        </section>
-
-        <section class="section">
-            <div class="section-inner">
-                <div class="section-number">01</div>
-                <h2>一枚の面</h2>
-                <div class="divider"></div>
-                <p>メビウスの輪は、<span class="highlight">一枚の帯を半捻りして両端をつなげた</span>だけの、驚くほど単純な形状です。</p>
-                <p>しかしこの単純さの裏に、数学的な深淵が潜んでいます。通常の輪なら「表」と「裏」がはっきり分かれていますが、メビウスの輪にはその区別がありません。</p>
-                <div class="fact-box">
-                    <p>指先を「表側」に置いて進めば、一周する前に「裏側」に入り、さらに進むと元の場所に戻ってきます。表も裏も、実は<span class="highlight">ひとつの連続した面</span>なのです。</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="section">
-            <div class="section-inner">
-                <div class="section-number">02</div>
-                <h2>無限の巡回</h2>
-                <div class="divider"></div>
-                <p>メビウスの輪の<span class="highlight-warm">中心線（リーダー曲線）</span>に沿って進むと、通常の円環では2周して初めて元の位置・向きに戻ります。</p>
-                <p>つまり、メビウスの輪の世界に住む点は、<span class="highlight">2周して初めて「同じ場所の同じ向き」</span>に戻るのです。これは空間の「捻じれ」が生み出す、幾何学的な不思議です。</p>
-                <p>この性質は、位相幾何学において「非指向的多様体」の最も美しい例として知られています。</p>
-            </div>
-        </section>
-
-        <section class="section">
-            <div class="section-inner">
-                <div class="section-number">03</div>
-                <h2>切断の魔法</h2>
-                <div class="divider"></div>
-                <p>紙で作ったメビウスの輪を<span class="highlight">中心に沿ってハサミで切る</span>と、思いもよらない結果が起こります。</p>
-                <p>普通の紙輪なら2つに分かれますが、メビウスの輪は<span class="highlight-warm">1つの大きな輪</span>になります。さらに2回捻じれが加わった、より複雑な形状へと変身するのです。</p>
-                <p>切断の位置を変えるだけで、1つ、2つ、あるいは絡まった輪へと変化します。これはメビウスの輪が持つ、トポロジーの遊び心です。</p>
-            </div>
-        </section>
-
-        <section class="footer">
-            <div class="footer-glow"></div>
-            <h2>終わりなき一周</h2>
-            <p>スクロールを続ける限り、メビウスの輪は回り続けます。<br>まるで、終わりのない旅のように。</p>
-        </section>
+    <div class="ui-overlay title-overlay">
+        <h1>メビウスの輪</h1>
+        <p>MÖBIUS STRIP JOURNEY</p>
     </div>
 
+    <div class="ui-overlay scroll-hint" id="scroll-hint">
+        <div>SCROLL</div>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64d8cb" stroke-width="1.5" stroke-linecap="round">
+            <path d="M12 5v14M5 12l7 7 7-7"/>
+        </svg>
+    </div>
+
+    <div class="ui-overlay progress-panel">
+        <div class="lap-text">LAP <span id="lap-count">1</span> / 2</div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+    </div>
+
+    <div class="scroll-spacer"></div>
+
     <script>
-        // ===== Three.js Setup =====
+        // ========================
+        // Config
+        // ========================
+        const R = 2.6;
+        const TOTAL_U = Math.PI * 4; // 2 full loops for camera
+        const GEO_U = Math.PI * 2;   // 1 loop for geometry (it loops physically)
+        const STRIP_WIDTH = 0.65;
+
+        // ========================
+        // Three.js Setup
+        // ========================
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        // Fog for depth
-        scene.fog = new THREE.FogExp2(0x0a0a0f, 0.035);
+        scene.fog = new THREE.FogExp2(0x0a0a0f, 0.045);
 
-        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(0, 1.5, 5);
+        const camera = new THREE.PerspectiveCamera(
+            55,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            100
+        );
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -357,211 +217,457 @@
         renderer.setClearColor(0x0a0a0f, 1);
         container.appendChild(renderer.domElement);
 
-        // ===== Möbius Strip Geometry =====
-        // Parametric Möbius strip
-        function mobiusStrip(u, v, target) {
-            u = u * Math.PI * 2; // 0 to 2π
-            v = (v - 0.5) * 0.8; // width of strip
-
-            const a = 1.5; // radius
-            const halfTwist = u / 2; // half twist over full loop
-
-            const x = (a + v * Math.cos(halfTwist)) * Math.cos(u);
-            const y = (a + v * Math.cos(halfTwist)) * Math.sin(u);
-            const z = v * Math.sin(halfTwist);
-
-            target.set(x, y, z);
+        // ========================
+        // Möbius Math Helpers
+        // ========================
+        function mobiusPoint(u, v) {
+            const cosU = Math.cos(u);
+            const sinU = Math.sin(u);
+            const cosHalfU = Math.cos(u * 0.5);
+            const sinHalfU = Math.sin(u * 0.5);
+            return new THREE.Vector3(
+                (R + v * cosHalfU) * cosU,
+                (R + v * cosHalfU) * sinU,
+                v * sinHalfU
+            );
         }
 
-        const geometry = new THREE.ParametricBufferGeometry(mobiusStrip, 120, 40);
+        function mobiusNormal(u) {
+            const cosU = Math.cos(u);
+            const sinU = Math.sin(u);
+            const cosHalfU = Math.cos(u * 0.5);
+            const sinHalfU = Math.sin(u * 0.5);
+            return new THREE.Vector3(
+                cosHalfU * cosU,
+                cosHalfU * sinU,
+                sinHalfU
+            ).normalize();
+        }
 
-        // Compute normals for smooth shading
-        geometry.computeVertexNormals();
+        function mobiusTangent(u) {
+            // Approximate tangent at v=0
+            const eps = 0.01;
+            const p1 = mobiusPoint(u - eps, 0);
+            const p2 = mobiusPoint(u + eps, 0);
+            return new THREE.Vector3().subVectors(p2, p1).normalize();
+        }
 
-        // ===== Material =====
-        const material = new THREE.MeshStandardMaterial({
-            color: 0x64d8cb,
-            emissive: 0x0a3a35,
-            emissiveIntensity: 0.3,
-            metalness: 0.7,
-            roughness: 0.2,
+        // ========================
+        // Gradient Texture for Strip
+        // ========================
+        function createStripTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 2048;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+
+            const grad = ctx.createLinearGradient(0, 0, 2048, 0);
+            grad.addColorStop(0.00, '#1a4a48');
+            grad.addColorStop(0.15, '#2a9d8f');
+            grad.addColorStop(0.30, '#64d8cb');
+            grad.addColorStop(0.45, '#e9c46a');
+            grad.addColorStop(0.60, '#f0a060');
+            grad.addColorStop(0.75, '#64d8cb');
+            grad.addColorStop(0.90, '#2a7a72');
+            grad.addColorStop(1.00, '#1a4a48');
+
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 2048, 256);
+
+            // Fine grain noise
+            for (let i = 0; i < 10000; i++) {
+                ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.035})`;
+                ctx.fillRect(Math.random() * 2048, Math.random() * 256, 2, 2);
+            }
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.ClampToEdgeWrapping;
+            return tex;
+        }
+
+        // ========================
+        // Möbius Strip Mesh
+        // ========================
+        const mobiusGeo = new THREE.ParametricBufferGeometry((u, v, target) => {
+            const um = u * GEO_U; // 0 to 2π
+            const vm = (v - 0.5) * STRIP_WIDTH;
+            const p = mobiusPoint(um, vm);
+            target.set(p.x, p.y, p.z);
+        }, 140, 30);
+
+        mobiusGeo.computeVertexNormals();
+
+        const mobiusMat = new THREE.MeshStandardMaterial({
+            map: createStripTexture(),
+            emissive: 0x0a2e2a,
+            emissiveIntensity: 0.45,
+            metalness: 0.75,
+            roughness: 0.18,
             side: THREE.DoubleSide,
             transparent: true,
-            opacity: 0.95,
+            opacity: 0.93
         });
 
-        const mobiusMesh = new THREE.Mesh(geometry, material);
+        const mobiusMesh = new THREE.Mesh(mobiusGeo, mobiusMat);
         scene.add(mobiusMesh);
 
-        // ===== Wireframe overlay =====
-        const wireGeo = new THREE.WireframeGeometry(geometry);
+        // Wireframe overlay
+        const wireGeo = new THREE.WireframeGeometry(mobiusGeo);
         const wireMat = new THREE.LineBasicMaterial({
-            color: 0x88f0e0,
+            color: 0x7ff0e0,
             transparent: true,
-            opacity: 0.15,
+            opacity: 0.10
         });
         const wireframe = new THREE.LineSegments(wireGeo, wireMat);
         mobiusMesh.add(wireframe);
 
-        // ===== Glow particles along the rim =====
-        const particleCount = 120;
-        const particleGeo = new THREE.BufferGeometry();
-        const positions = new Float32Array(particleCount * 3);
-        const particleData = [];
+        // ========================
+        // Particles flowing on strip
+        // ========================
+        const particleCount = 180;
+        const pGeo = new THREE.BufferGeometry();
+        const pPositions = new Float32Array(particleCount * 3);
+        const pData = [];
 
         for (let i = 0; i < particleCount; i++) {
-            const u = (i / particleCount) * Math.PI * 2;
-            const a = 1.5;
-            const v = 0; // along the center line
-            const halfTwist = u / 2;
-
-            positions[i * 3] = (a + v * Math.cos(halfTwist)) * Math.cos(u);
-            positions[i * 3 + 1] = (a + v * Math.cos(halfTwist)) * Math.sin(u);
-            positions[i * 3 + 2] = v * Math.sin(halfTwist);
-
-            particleData.push({
-                u: u,
-                speed: 0.2 + Math.random() * 0.3,
-                offset: Math.random() * Math.PI * 2,
-                radius: 0.01 + Math.random() * 0.02,
+            const u = Math.random() * GEO_U;
+            const v = (Math.random() - 0.5) * STRIP_WIDTH * 0.7;
+            const p = mobiusPoint(u, v);
+            pPositions[i * 3] = p.x;
+            pPositions[i * 3 + 1] = p.y;
+            pPositions[i * 3 + 2] = p.z;
+            pData.push({
+                baseU: u,
+                v: v,
+                speed: 0.2 + Math.random() * 0.4,
+                phase: Math.random() * Math.PI * 2
             });
         }
 
-        particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        pGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
 
-        const particleMat = new THREE.PointsMaterial({
-            color: 0x64d8cb,
-            size: 0.04,
+        const pMat = new THREE.PointsMaterial({
+            color: 0xa0f0e8,
+            size: 0.065,
             transparent: true,
-            opacity: 0.8,
+            opacity: 0.55,
             blending: THREE.AdditiveBlending,
+            sizeAttenuation: true,
+            depthWrite: false
         });
 
-        const particles = new THREE.Points(particleGeo, particleMat);
-        scene.add(particles);
+        const particleSystem = new THREE.Points(pGeo, pMat);
+        scene.add(particleSystem);
 
-        // ===== Lighting =====
-        const ambientLight = new THREE.AmbientLight(0x404060, 0.8);
+        // ========================
+        // Text Panel Creator
+        // ========================
+        function createTextPanel(title, lines, u) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const w = 1200;
+            const lineHeight = 54;
+            const paddingY = 170 + lines.length * lineHeight;
+            const h = Math.max(420, paddingY);
+            canvas.width = w;
+            canvas.height = h;
+
+            // Background
+            const bgGrad = ctx.createLinearGradient(0, 0, w, h);
+            bgGrad.addColorStop(0, 'rgba(10, 12, 22, 0.93)');
+            bgGrad.addColorStop(1, 'rgba(14, 18, 30, 0.88)');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, w, h);
+
+            // Glow border
+            ctx.shadowColor = '#64d8cb';
+            ctx.shadowBlur = 25;
+            ctx.strokeStyle = 'rgba(100, 216, 203, 0.35)';
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(22, 22, w - 44, h - 44);
+            ctx.shadowBlur = 0;
+
+            // Inner subtle line
+            ctx.strokeStyle = 'rgba(100, 216, 203, 0.10)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(36, 36, w - 72, h - 72);
+
+            // Title
+            ctx.font = 'bold 62px "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif';
+            ctx.fillStyle = '#f0eef5';
+            ctx.textAlign = 'center';
+            ctx.fillText(title, w / 2, 115);
+
+            // Accent divider
+            ctx.strokeStyle = 'rgba(100, 216, 203, 0.55)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(w / 2 - 50, 145);
+            ctx.lineTo(w / 2 + 50, 145);
+            ctx.stroke();
+
+            // Body text
+            ctx.font = '32px "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif';
+            ctx.fillStyle = '#a0a0b8';
+            lines.forEach((line, i) => {
+                ctx.fillText(line, w / 2, 210 + i * lineHeight);
+            });
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+
+            const material = new THREE.SpriteMaterial({
+                map: texture,
+                transparent: true,
+                opacity: 0,
+                depthWrite: false
+            });
+
+            const sprite = new THREE.Sprite(material);
+            sprite.userData.u = u;
+            const aspect = w / h;
+            const baseWidth = 3.6;
+            sprite.userData.baseScale = {
+                x: baseWidth,
+                y: baseWidth / aspect
+            };
+            sprite.scale.set(sprite.userData.baseScale.x, sprite.userData.baseScale.y, 1);
+
+            const pos = mobiusPoint(u % GEO_U, 0);
+            const n = mobiusNormal(u % GEO_U);
+            // Slightly elevated from strip surface
+            sprite.position.copy(pos).add(n.multiplyScalar(1.4));
+
+            return sprite;
+        }
+
+        // ========================
+        // Place Panels along the journey
+        // ========================
+        const textPanels = [];
+        const panelsData = [
+            {
+                title: 'メビウスの輪',
+                lines: ['帯を半捻じり、両端をつなげただけ。', 'そこに、無限が生まれる。'],
+                u: Math.PI * 0.35
+            },
+            {
+                title: '一枚の面',
+                lines: ['「表」と「裏」の区別がない。', '指を置いて進めば、気づかぬうちに裏へ。', 'さらに進めば、また元の場所へ。'],
+                u: Math.PI * 0.95
+            },
+            {
+                title: '1周の終わり',
+                lines: ['ここで1周が終わる。', 'しかし、あなたの向きは反転している。', '2周して、初めて元の世界に戻る。'],
+                u: Math.PI * 1.85
+            },
+            {
+                title: '無限の巡回',
+                lines: ['中心線に沿って進み続けると、', '2周して初めて「同じ場所・同じ向き」。', 'これが、空間の捻じれが生む幾何学。'],
+                u: Math.PI * 2.55
+            },
+            {
+                title: '切断の魔法',
+                lines: ['中心に沿って切ると、2つには分かれない。', '1つの大きな輪へと変身する。', '位置を変えるだけで、すべてが変わる。'],
+                u: Math.PI * 3.45
+            }
+        ];
+
+        panelsData.forEach(data => {
+            const panel = createTextPanel(data.title, data.lines, data.u);
+            textPanels.push(panel);
+            scene.add(panel);
+        });
+
+        // Re-render textures after font loads
+        if (document.fonts) {
+            document.fonts.ready.then(() => {
+                textPanels.forEach((panel, i) => {
+                    const data = panelsData[i];
+                    const newPanel = createTextPanel(data.title, data.lines, data.u);
+                    panel.material.map = newPanel.material.map;
+                    panel.material.needsUpdate = true;
+                });
+            });
+        }
+
+        // ========================
+        // Lighting
+        // ========================
+        const ambientLight = new THREE.AmbientLight(0x303850, 1.0);
         scene.add(ambientLight);
 
-        const mainLight = new THREE.DirectionalLight(0xaaccff, 0.8);
-        mainLight.position.set(3, 5, 4);
+        const mainLight = new THREE.DirectionalLight(0xa0c8ff, 0.7);
+        mainLight.position.set(4, 6, 5);
         scene.add(mainLight);
 
-        const rimLight = new THREE.PointLight(0x64d8cb, 1.2, 20);
-        rimLight.position.set(-3, 2, -2);
-        scene.add(rimLight);
+        const tealLight = new THREE.PointLight(0x64d8cb, 1.4, 22);
+        tealLight.position.set(-2, 3, 2);
+        scene.add(tealLight);
 
-        const warmLight = new THREE.PointLight(0xf0a060, 0.6, 20);
-        warmLight.position.set(3, -2, 3);
+        const warmLight = new THREE.PointLight(0xf0a060, 1.0, 22);
+        warmLight.position.set(3, -3, 4);
         scene.add(warmLight);
 
-        // ===== Scroll-driven rotation =====
-        let scrollY = 0;
-        let targetRotationX = 0;
-        let targetRotationY = 0;
-        let targetRotationZ = 0;
-        let currentRotationX = 0;
-        let currentRotationY = 0;
-        let currentRotationZ = 0;
+        const rimLight = new THREE.PointLight(0x5080ff, 0.6, 20);
+        rimLight.position.set(0, 1, -6);
+        scene.add(rimLight);
+
+        // ========================
+        // Scroll Logic
+        // ========================
+        let scrollProgress = 0;
+        const scrollHint = document.getElementById('scroll-hint');
+        const lapCount = document.getElementById('lap-count');
+        const progressFill = document.getElementById('progress-fill');
+        const flashOverlay = document.querySelector('.flash-overlay');
+        const lapFlash = document.getElementById('lap-flash');
 
         function onScroll() {
-            scrollY = window.scrollY;
             const maxScroll = document.body.scrollHeight - window.innerHeight;
-            const scrollProgress = maxScroll > 0 ? scrollY / maxScroll : 0;
+            scrollProgress = maxScroll > 0 ? window.scrollY / maxScroll : 0;
 
-            // Multi-axis rotation based on scroll
-            targetRotationY = scrollProgress * Math.PI * 4; // 2 full rotations
-            targetRotationX = Math.sin(scrollProgress * Math.PI * 2) * 0.5;
-            targetRotationZ = scrollProgress * Math.PI * 0.5;
+            // UI updates
+            const lap = scrollProgress < 0.5 ? 1 : 2;
+            lapCount.textContent = lap;
+            progressFill.style.width = (scrollProgress * 100) + '%';
 
-            // Camera gently orbits
-            const camAngle = scrollProgress * Math.PI * 2;
-            camera.position.x = Math.sin(camAngle) * 0.8;
-            camera.position.y = 1.5 + Math.sin(scrollProgress * Math.PI) * 0.5;
-            camera.position.z = 5 - scrollProgress * 1.5;
-            camera.lookAt(0, 0, 0);
+            // Hide scroll hint
+            if (scrollProgress > 0.03) {
+                scrollHint.style.opacity = '0';
+            } else {
+                scrollHint.style.opacity = '1';
+            }
         }
 
         window.addEventListener('scroll', onScroll, { passive: true });
 
-        // ===== Animation Loop =====
+        // ========================
+        // Animation Loop
+        // ========================
         const clock = new THREE.Clock();
 
         function animate() {
             requestAnimationFrame(animate);
             const time = clock.getElapsedTime();
-            const delta = clock.getDelta();
 
-            // Smooth rotation interpolation
-            currentRotationX += (targetRotationX - currentRotationX) * 0.05;
-            currentRotationY += (targetRotationY - currentRotationY) * 0.05;
-            currentRotationZ += (targetRotationZ - currentRotationZ) * 0.05;
+            // Camera travels 2 full loops along the Möbius centerline
+            const cameraU = scrollProgress * TOTAL_U;
+            const wrappedU = cameraU % GEO_U;
 
-            mobiusMesh.rotation.x = currentRotationX;
-            mobiusMesh.rotation.y = currentRotationY + time * 0.1; // subtle auto-rotation
-            mobiusMesh.rotation.z = currentRotationZ;
+            // Camera position: on centerline, slightly elevated
+            const center = mobiusPoint(wrappedU, 0);
+            const normal = mobiusNormal(wrappedU);
+            const tangent = mobiusTangent(wrappedU);
 
-            // Animate particles along the Möbius strip path
-            const posAttr = particleGeo.attributes.position;
-            for (let i = 0; i < particleCount; i++) {
-                const data = particleData[i];
-                const t = (data.u + time * data.speed + scrollY * 0.002) % (Math.PI * 2);
-                const a = 1.5;
-                const v = Math.sin(time * 2 + data.offset) * 0.08;
-                const halfTwist = t / 2;
+            // Offset from surface
+            const camOffset = normal.clone().multiplyScalar(0.55);
+            camOffset.add(new THREE.Vector3(0, 0.35, 0));
+            camera.position.copy(center).add(camOffset);
 
-                posAttr.setXYZ(
-                    i,
-                    (a + v * Math.cos(halfTwist)) * Math.cos(t),
-                    (a + v * Math.cos(halfTwist)) * Math.sin(t),
-                    v * Math.sin(halfTwist)
+            // Look ahead along the strip
+            const lookU = wrappedU + 0.45;
+            const lookPos = mobiusPoint(lookU, 0);
+            camera.lookAt(lookPos);
+
+            // Subtle camera sway from mouse
+            // (optional, adds liveliness)
+
+            // Rotate the strip mesh slowly for ambient motion
+            // We rotate the whole group slightly so the strip feels alive
+            mobiusMesh.rotation.z = Math.sin(time * 0.08) * 0.03;
+
+            // Update text panel visibility based on camera proximity
+            textPanels.forEach(panel => {
+                const targetU = panel.userData.u;
+                let du = targetU - cameraU;
+
+                // Wrap to nearest (handles the 2-loop journey)
+                while (du > TOTAL_U / 2) du -= TOTAL_U;
+                while (du < -TOTAL_U / 2) du += TOTAL_U;
+
+                const dist = Math.abs(du);
+                // Fade in when close, fade out when far
+                let opacity = Math.max(0, Math.min(1, 1.4 - dist / 0.85));
+
+                // Also fade if very close (passing by)
+                if (dist < 0.25) {
+                    opacity = dist / 0.25;
+                }
+
+                panel.material.opacity = opacity * 0.96;
+
+                const scaleMul = 0.75 + opacity * 0.35;
+                panel.scale.set(
+                    panel.userData.baseScale.x * scaleMul,
+                    panel.userData.baseScale.y * scaleMul,
+                    1
                 );
+
+                // Keep panel facing roughly toward camera by being a Sprite
+                // (Sprites always face camera, so nothing extra needed)
+
+                // Subtle bobbing
+                panel.position.y += Math.sin(time * 1.5 + panel.userData.u) * 0.001;
+            });
+
+            // Animate particles drifting along the strip
+            const positions = particleSystem.geometry.attributes.position.array;
+            for (let i = 0; i < particleCount; i++) {
+                const d = pData[i];
+                d.baseU += d.speed * 0.012;
+                if (d.baseU > GEO_U) d.baseU -= GEO_U;
+
+                const u = d.baseU;
+                const v = d.v + Math.sin(time * 2 + d.phase) * 0.03;
+                const p = mobiusPoint(u, v);
+
+                positions[i * 3] = p.x;
+                positions[i * 3 + 1] = p.y;
+                positions[i * 3 + 2] = p.z;
             }
-            posAttr.needsUpdate = true;
+            particleSystem.geometry.attributes.position.needsUpdate = true;
 
-            // Pulse the rim light
-            rimLight.intensity = 1.0 + Math.sin(time * 1.5) * 0.3;
+            // Pulse wireframe opacity
+            wireMat.opacity = 0.08 + Math.sin(time * 0.7) * 0.03;
 
-            // Subtle wireframe opacity shift
-            wireMat.opacity = 0.1 + Math.sin(time * 0.8) * 0.05;
+            // Pulse lights
+            tealLight.intensity = 1.2 + Math.sin(time * 1.1) * 0.25;
+            warmLight.intensity = 0.85 + Math.sin(time * 0.8 + 2) * 0.2;
+
+            // Flash effect near u = 2π (end of 1st lap)
+            const distFrom2Pi = Math.abs(cameraU - Math.PI * 2);
+            const flashRange = 0.55;
+            if (distFrom2Pi < flashRange) {
+                const t = 1 - distFrom2Pi / flashRange;
+                flashOverlay.style.opacity = (t * t * 0.35).toString();
+            } else {
+                flashOverlay.style.opacity = '0';
+            }
+
+            // Lap flash text
+            if (distFrom2Pi < 0.7) {
+                lapFlash.classList.add('visible');
+            } else {
+                lapFlash.classList.remove('visible');
+            }
 
             renderer.render(scene, camera);
         }
 
         animate();
 
-        // ===== Resize Handler =====
+        // ========================
+        // Resize
+        // ========================
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // ===== Intersection Observer for fade-in sections =====
-        const observerOptions = {
-            root: null,
-            rootMargin: '0px',
-            threshold: 0.2,
-        };
-
-        const sectionObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
-                }
-            });
-        }, observerOptions);
-
-        document.querySelectorAll('.section-inner').forEach(el => {
-            el.style.opacity = '0';
-            el.style.transform = 'translateY(30px)';
-            el.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
-            sectionObserver.observe(el);
-        });
-
-        // Initial scroll calculation
+        // Initial call
         onScroll();
     </script>
 </body>
